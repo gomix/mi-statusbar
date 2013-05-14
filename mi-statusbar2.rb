@@ -58,7 +58,6 @@ reset = '\x1b[0m'
 #  2. Temperatura
 #  3. Bateria 
 
-
 def hibernar
   # Tengo problemas al ejecutar
   #`dbus-send --print-reply --system --dest=org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower.Hibernate`
@@ -141,7 +140,7 @@ def notificar_alta_temperatura
 
   if t > 75
     `notify-send "Alta temperatura: #{t}, guarda tu trabajo"`
-    `echo "Alta temperatura: #{t}, guarda tu trabajo" |osd_cat -p middle -A center -s 1 -f -adobe-helvetica-bold-*-*-*-34-*-*-*-*-*-*-*`
+    #`echo "Alta temperatura: #{t}, guarda tu trabajo" |osd_cat -p middle -A center -s 1 -f -adobe-helvetica-bold-*-*-*-34-*-*-*-*-*-*-*`
   end
 end
 
