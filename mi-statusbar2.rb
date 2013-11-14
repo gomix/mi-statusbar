@@ -6,6 +6,7 @@
 #             osd_cat (xosd)
 #             dunst (* en realidad debe funcionar con cualquier servidor de notificadiones)
 #             pidfile (gem)
+#             feh
 #
 #
 # Guillermo Gómez Savino. (Gomix) 2013
@@ -49,15 +50,19 @@ reset = '\x1b[0m'
 # 2. Establecer el mapa de teclado
 # 3. Crear archivo pid, para evitar múltiples instancias
 # 4. Incorporar hilos Ruby
+# 5. Red, monitor
+# 6. Establecer fondo de escritorio
 ## La idea de tener los tres hilos (en realidad uno por ahora), es no detener
 ## la salida del programa, por ejemplo, esperando que se conecte
 ## el cargador AC para evitar que hiberne o suspenda la maquina
 
-# Son tres modulos
+# Son (serán) cuatro modulos
 #  1. Reloj (fecha/hora)
 #  2. Temperatura
-#  3. Bateria 
+#  3. Bateria  
+#  4. Red
 
+# Energía Batería/Energía
 def hibernar
   # Tengo problemas al ejecutar
   #`dbus-send --print-reply --system --dest=org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower.Hibernate`
@@ -135,6 +140,12 @@ def battery_charge
   sign + charge.match(/\d{1,3}%/).to_s          # Calculo del string a presentar
 end
 
+def colored_battery_charge
+  # coloreado ansi para dwm
+  battery_charge
+end
+
+# Temperatura
 def notificar_alta_temperatura
   t = `acpi -t`.split(',').last.split.first.to_i      # Captura de y ajuste de datos del sistema
 
@@ -144,11 +155,41 @@ def notificar_alta_temperatura
   end
 end
 
-def colored_battery_charge
-  # coloreado ansi para dwm
-  battery_charge
+# Red
+def red_activa?
+  # ¿Está el servicio de red activo? (base NetworkManager)
+  # "Red Activada"
 end
 
+def conectividad_ip?
+  # ¿Tengo IP?
+  # ¿Tengo interfase de red configurada y activa?
+  # ¿Estoy conectado a una red pública o privada?
+end
+
+def ping_internet?
+  # ¿Hago ping a una dirección prestablecida?
+end
+
+def resuelvo_nombres?
+  # ¿Resuelvo nombres DNS?
+end
+
+def acceso_web?
+  # ¿ping http a sitio altamente disponible?
+  # Definir un arreglo, basta que uno responda
+end
+
+def reconectarse_a_la_red
+  # Intentar reconectar la última interfase conocida que funcionó o que esté disponible
+  # ¿Red cablead, enlace?
+  # ¿Red inalámbrica, AP disponible?
+end
+
+# Opciones de configuración para el demonio
+# TODO: 
+#  * Ajustar :dir para que expanda a partir del HOME del entorno
+#  * El proceso sigue corriendo fuera del entorno gráfico, debe salir
 options = {
   :app_name => "statusbar",
   :dir_mode => :normal,
@@ -156,9 +197,10 @@ options = {
   :log_output => true,
   :ontop => false 
 }
-##  :dir => ".",
 
+`feh --bg-scale /home/gomix/Imágenes/WallPapers/26744_1600x1200-wallpaper-cb1286895512.jpg`
 
+# Definición del lazo principal de la aplicación
 main = Proc.new {
 loop do
   
@@ -183,4 +225,5 @@ loop do
 end
 }
 
+# Arranque del demonio (incluye desconexión del terminal de control)
 Daemons.call(options, &main)
