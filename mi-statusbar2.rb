@@ -157,14 +157,24 @@ end
 
 # Red
 def red_activa?
-  # ¿Está el servicio de red activo? (base NetworkManager)
+  # ¿Está el servicio de red activo? (¿Base NetworkManager?)
+  # Hay que determinar el API a consultar o interfase kernel
+  # Idealmente debería ser a nivel kernel
   # "Red Activada"
+  # Como por ahora sigo con NM, me baso en él
+  # Básicamente entonces lo que necesito es saber si NM está en ejecución
+  # systemctl status NetworkManager.service
+  `systemctl status NetworkManager.service`
+  $?.exitstatus.eql?(0) ? true:false
 end
 
 def conectividad_ip?
   # ¿Tengo IP?
   # ¿Tengo interfase de red configurada y activa?
   # ¿Estoy conectado a una red pública o privada?
+  #nm-online
+  #nmcli con show active (determinar nombre/uuid de la interfase activa)
+  #nmcli con show active <uuid> me ofrece detalles
 end
 
 def ping_internet?
@@ -217,8 +227,12 @@ loop do
   # Reloj
   fecha_hora = Time.now.strftime("%I:%M %P %e-%b")                         # Calculo del string a presentar
  
+  # Red
+  red_activa? ? red='+net' : red='-net'                                             # Calculo del string a presenta
+  #red_activa? ? '+net':'-net'                                             # Calculo del string a presenta
+
   # Salida
-  `xsetroot -name "#{fecha_hora} #{colored_battery_charge} #{temperatura} dwm-6.0"`        # Mostrar en la barra de estado
+  `xsetroot -name "#{fecha_hora} #{colored_battery_charge} #{temperatura} #{red} dwm-6.0"`        # Mostrar en la barra de estado
 
   # puts "Durmiendo #{T_MUESTREO} segundos"
   sleep T_MUESTREO
