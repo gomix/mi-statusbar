@@ -215,25 +215,30 @@ def red
   red_activa? ? '+net' : '-net'                                    # Calculo del string a presenta para red 
 end
 
-################################# Fondo del escritorio
+################################## Fondo del escritorio
 def poner_el_fondo_de_escritorio
   `feh --bg-scale /home/gomix/Imágenes/WallPapers/26744_1600x1200-wallpaper-cb1286895512.jpg`
 end
 
-# Fecha hora
+################################## Fecha hora
 def fecha_hora
   Time.now.strftime("%I:%M%P %e-%b")                         # Calculo del string a presentar fecha/hora
 end
 
 ################################## Barra de estado
 def mostrar_barra_de_estado
-  `xsetroot -name "#{fecha_hora} #{bateria} #{temperatura} #{red} dwm-6.0"`        # Mostrar en la barra de estado
+  `xsetroot -name "#{fecha_hora} #{bateria} #{temperatura} #{red} #{dwm_version}"`        # Mostrar en la barra de estado
 end
 
 def dormir
   sleep T_MUESTREO
 end
 
+def dwm_version
+  `dwm -v 2>&1`.split(',').first
+end
+
+################################## Demonio
 # Opciones de configuración para el demonio
 # TODO: 
 #  * Ajustar :dir para que expanda a partir del HOME del entorno
@@ -251,7 +256,6 @@ poner_el_fondo_de_escritorio
 # Definición del lazo principal de la aplicación
 main = Proc.new {
 loop do
-  #`xsetroot -name "#{fecha_hora} #{bateria} #{temperatura} #{red} dwm-6.0"`        # Mostrar en la barra de estado
   mostrar_barra_de_estado
   dormir
 end
