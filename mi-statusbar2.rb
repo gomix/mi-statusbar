@@ -14,6 +14,7 @@
 #   Fecha/Hora
 #   Batería/Carga
 #   Temperatura 
+#   Red
 
 # Configurar
 HIBERNAR='hibrido'          # [hibernar, suspender, hibrido]
@@ -50,7 +51,7 @@ reset = '\x1b[0m'
 # 2. Establecer el mapa de teclado
 # 3. Crear archivo pid, para evitar múltiples instancias
 # 4. Incorporar hilos Ruby
-# 5. Red, monitor
+# 5. Conexion de red, monitor
 # 6. Establecer fondo de escritorio
 ## La idea de tener los tres hilos (en realidad uno por ahora), es no detener
 ## la salida del programa, por ejemplo, esperando que se conecte
@@ -61,8 +62,9 @@ reset = '\x1b[0m'
 #  2. Temperatura
 #  3. Bateria  
 #  4. Red
+#  5. Fondo del escritorio (wallpaper)
 
-# Energía Batería/Energía
+############################ Energía Batería/Energía
 def hibernar
   # Tengo problemas al ejecutar
   #`dbus-send --print-reply --system --dest=org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower.Hibernate`
@@ -145,7 +147,13 @@ def colored_battery_charge
   battery_charge
 end
 
-# Temperatura
+def bateria
+  notificar_bateria_baja if discharging?        # Notificar si la batería está baja
+  hibernar_o_suspender if discharging?          # Poner a dormir si hace falta
+  colored_battery_charge
+end
+
+################### Temperatura
 def notificar_alta_temperatura
   t = `acpi -t`.split(',').last.split.first.to_i      # Captura de y ajuste de datos del sistema
 
@@ -155,7 +163,14 @@ def notificar_alta_temperatura
   end
 end
 
-# Red
+def temperatura
+  #temperatura = `acpi -t`                                                  # Captura de datos del sistema
+  #temperatura = temperatura.split(',').last.split.first + 'º'              # Calculo del string a presentar temperatura
+  notificar_alta_temperatura                    # Vigilar temperatura
+  `acpi -t`.split(',').last.split.first + 'º'   # Calculo del string a presentar temperatura
+end
+
+################### Red
 def red_activa?
   # ¿Está el servicio de red activo? (¿Base NetworkManager?)
   # Hay que determinar el API a consultar o interfase kernel
@@ -196,46 +211,49 @@ def reconectarse_a_la_red
   # ¿Red inalámbrica, AP disponible?
 end
 
+def red
+  red_activa? ? '+net' : '-net'                                    # Calculo del string a presenta para red 
+end
+
+################################# Fondo del escritorio
+def poner_el_fondo_de_escritorio
+  `feh --bg-scale /home/gomix/Imágenes/WallPapers/26744_1600x1200-wallpaper-cb1286895512.jpg`
+end
+
+# Fecha hora
+def fecha_hora
+  Time.now.strftime("%I:%M%P %e-%b")                         # Calculo del string a presentar fecha/hora
+end
+
+################################## Barra de estado
+def mostrar_barra_de_estado
+  `xsetroot -name "#{fecha_hora} #{bateria} #{temperatura} #{red} dwm-6.0"`        # Mostrar en la barra de estado
+end
+
+def dormir
+  sleep T_MUESTREO
+end
+
 # Opciones de configuración para el demonio
 # TODO: 
 #  * Ajustar :dir para que expanda a partir del HOME del entorno
-#  * El proceso sigue corriendo fuera del entorno gráfico, debe salir
+#   * El proceso sigue corriendo fuera del entorno gráfico, debe salir
 options = {
   :app_name => "statusbar",
   :dir_mode => :normal,
   :dir => "/home/gomix/tmp/pids/",
   :log_output => true,
   :ontop => false 
-}
+ }
 
-`feh --bg-scale /home/gomix/Imágenes/WallPapers/26744_1600x1200-wallpaper-cb1286895512.jpg`
+poner_el_fondo_de_escritorio
 
 # Definición del lazo principal de la aplicación
 main = Proc.new {
 loop do
-  
-  # Bateria
-  notificar_bateria_baja if discharging?        # Notificar si la batería está baja
-  hibernar_o_suspender if discharging?          # Poner a dormir si hace falta
-
-  # Temperatura
-  notificar_alta_temperatura                    # Vigilar temperatura
-
-  temperatura = `acpi -t`                                                  # Captura de datos del sistema
-  temperatura = temperatura.split(',').last.split.first + 'º'              # Calculo del string a presentar
-
-  # Reloj
-  fecha_hora = Time.now.strftime("%I:%M %P %e-%b")                         # Calculo del string a presentar
- 
-  # Red
-  red_activa? ? red='+net' : red='-net'                                             # Calculo del string a presenta
-  #red_activa? ? '+net':'-net'                                             # Calculo del string a presenta
-
-  # Salida
-  `xsetroot -name "#{fecha_hora} #{colored_battery_charge} #{temperatura} #{red} dwm-6.0"`        # Mostrar en la barra de estado
-
-  # puts "Durmiendo #{T_MUESTREO} segundos"
-  sleep T_MUESTREO
+  #`xsetroot -name "#{fecha_hora} #{bateria} #{temperatura} #{red} dwm-6.0"`        # Mostrar en la barra de estado
+  mostrar_barra_de_estado
+  dormir
 end
 }
 
