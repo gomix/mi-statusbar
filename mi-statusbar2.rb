@@ -11,19 +11,33 @@
 #
 # Guillermo Gómez Savino. (Gomix) 2013
 # Script para mi DWM, "Barra de estado"
-#   Fecha/Hora
-#   Batería/Carga
-#   Temperatura 
-#   Red
+#  1. Reloj (fecha/hora)
+#  2. Temperatura
+#  3. Bateria  
+#  4. Red
+#  5. Fondo del escritorio (wallpaper)
 
-# Configurar
+# TODO: Nuevas funcionalidades
+# 1. Cambiar notificaciones a dunst, iniciar servidor de notificaciones de ser necesario.
+#  ** Ya código arreglado, falta probar.
+# 2. Establecer el mapa de teclado
+# 3. Crear archivo pid, para evitar múltiples instancias
+# 4. Incorporar hilos Ruby
+# 5. Conexion de red, monitor
+# 6. Establecer fondo de escritorio
+## La idea de tener los tres hilos (en realidad uno por ahora), es no detener
+## la salida del programa, por ejemplo, esperando que se conecte
+## el cargador AC para evitar que hiberne o suspenda la maquina
+
+######################### Configuracion
 HIBERNAR='hibrido'          # [hibernar, suspender, hibrido]
 UMBRAL_CARGA=10             # Umbral de comparación para suspender/hibernar
 UMBRAL_TEMPERATURA=58       # Umbral de comparación para suspender/hibernar
-T_MUESTREO=10               # Tiempo de muestreo para el lazo principal del  programa
+T_MUESTREO=10               # Tiempo de muestreo para el lazo principal del  programa en segundos
 PIDDIR="/home/gomix/tmp"
 PIDFILE="mi-statusbar2.pid"
 
+######################## Dependencias
 # gems
 require 'daemons'
 require 'pidfile'
@@ -45,26 +59,7 @@ redbg = '\033[48;5;196m' #octal
 blackbg = '\x1b[48;5;16m' #hexadecimal
 reset = '\x1b[0m'
 
-# TODO: Nuevas funcionalidades
-# 1. Cambiar notificaciones a dunst, iniciar servidor de notificaciones de ser necesario.
-#  ** Ya código arreglado, falta probar.
-# 2. Establecer el mapa de teclado
-# 3. Crear archivo pid, para evitar múltiples instancias
-# 4. Incorporar hilos Ruby
-# 5. Conexion de red, monitor
-# 6. Establecer fondo de escritorio
-## La idea de tener los tres hilos (en realidad uno por ahora), es no detener
-## la salida del programa, por ejemplo, esperando que se conecte
-## el cargador AC para evitar que hiberne o suspenda la maquina
-
-# Son (serán) cuatro modulos
-#  1. Reloj (fecha/hora)
-#  2. Temperatura
-#  3. Bateria  
-#  4. Red
-#  5. Fondo del escritorio (wallpaper)
-
-############################ Energía Batería/Energía
+################################## Energía Batería/Energía
 def hibernar
   # Tengo problemas al ejecutar
   #`dbus-send --print-reply --system --dest=org.freedesktop.UPower /org/freedesktop/UPower org.freedesktop.UPower.Hibernate`
@@ -153,7 +148,7 @@ def bateria
   colored_battery_charge
 end
 
-################### Temperatura
+################################## Temperatura
 def notificar_alta_temperatura
   t = `acpi -t`.split(',').last.split.first.to_i      # Captura de y ajuste de datos del sistema
 
@@ -170,7 +165,7 @@ def temperatura
   `acpi -t`.split(',').last.split.first + 'º'   # Calculo del string a presentar temperatura
 end
 
-################### Red
+################################## Red
 def red_activa?
   # ¿Está el servicio de red activo? (¿Base NetworkManager?)
   # Hay que determinar el API a consultar o interfase kernel
@@ -181,6 +176,10 @@ def red_activa?
   # systemctl status NetworkManager.service
   `systemctl status NetworkManager.service`
   $?.exitstatus.eql?(0) ? true:false
+end
+
+def red_interfase_activa
+  `nmcli -t -f name con show active`.chomp
 end
 
 def conectividad_ip?
@@ -212,12 +211,34 @@ def reconectarse_a_la_red
 end
 
 def red
-  red_activa? ? '+net' : '-net'                                    # Calculo del string a presenta para red 
+  red_activa? ? "+net(#{red_interfase_activa})" : "-net(#{red_interfase_activa})"                                    # Calculo del string a presenta para red 
 end
 
 ################################## Fondo del escritorio
 def poner_el_fondo_de_escritorio
-  `feh --bg-scale /home/gomix/Imágenes/WallPapers/26744_1600x1200-wallpaper-cb1286895512.jpg`
+  fondo_de_escritorio if es_hora_de_poner_el_fondo_de_escritorio
+end
+
+def es_hora_de_poner_el_fondo_de_escritorio
+  # Por ahora cada 5 minutos es la intención, no funciona bien 
+  # aún porque evaluar los minutos cada 10 segundos, da lo mismo 
+  # que pintar cada 10 segundos durante ese "minuto" (hasta 6 cambios por minutos)
+  [0,5,10,14,15,16,20,25,30,35,40,45,50,55].include?(Time.now.min)
+end
+
+def fondo_de_escritorio
+  # Para poder cambiar, o lo hago aleatoriamente, o debo poder recordar .. por ahora aleatorio
+  `feh --bg-fill #{seleccionar_fondo_de_escritorio}`
+end
+
+def seleccionar_fondo_de_escritorio
+  fondo_de_escritorio_aleatorio
+end
+
+def fondo_de_escritorio_aleatorio
+  Dir.chdir("/home/gomix/Imágenes/WallPapers/statusbar")
+  imgs = Dir.glob("*.*").map(&File.method(:realpath))
+  imgs[rand(imgs.size)]
 end
 
 ################################## Fecha hora
@@ -251,11 +272,13 @@ options = {
   :ontop => false 
  }
 
-poner_el_fondo_de_escritorio
+# Poner el fondo de escritorio no debe esperar su hora al inicio del programa
+  fondo_de_escritorio
 
 # Definición del lazo principal de la aplicación
 main = Proc.new {
 loop do
+  poner_el_fondo_de_escritorio
   mostrar_barra_de_estado
   dormir
 end
