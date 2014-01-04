@@ -243,7 +243,7 @@ end
 
 ################################## Fecha hora
 def fecha_hora
-  Time.now.strftime("%I:%M%P %e-%b")                         # Calculo del string a presentar fecha/hora
+  Time.now.strftime("%I:%M%P %a %e %b")                         # Calculo del string a presentar fecha/hora
 end
 
 ################################## Barra de estado
