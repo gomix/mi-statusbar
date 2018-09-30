@@ -179,7 +179,7 @@ def red_activa?
 end
 
 def red_interfase_activa
-  `nmcli -t -f name con show active`.chomp
+  `nmcli -t -f name con show --active`.chomp
 end
 
 def conectividad_ip?
